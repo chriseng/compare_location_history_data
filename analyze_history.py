@@ -187,6 +187,9 @@ def parseActivitiesFromZip(zip_fn, user_id=""):
         act.insert(0, user_id)
     return activity
 
+def simplifyDataPoint(point):
+    return [point[0], point[6], point[3], point[4]]
+    
 # Default thresholds are 30 minutes and 0.5 km
 def showDelta(pointA, pointB, time_threshold_ms=900000, dist_threshold_km=0.5):
     time_delta = pointB[5] - pointA[5]
@@ -194,10 +197,13 @@ def showDelta(pointA, pointB, time_threshold_ms=900000, dist_threshold_km=0.5):
                                      (pointB[3], pointB[4]))
     if time_delta <= time_threshold_ms and dist_delta <= dist_threshold_km:
         print("Possible overlap!")
-        print(pointA)
-        print(pointB)
-        print("Time delta: " + str(time_delta/1000/60) + " mins")
-        print("Dist delta: " + str(dist_delta) + " km")
+        print(simplifyDataPoint(pointA))
+        print(simplifyDataPoint(pointB))
+        time_delta_secs = int(time_delta/1000) % 60
+        time_delta_mins = int(time_delta/1000/60) % 60
+#        print("Time delta: " + str(time_delta/1000/60) + " mins")
+        print("Time delta: " + str(time_delta_mins) + " mins " + str(time_delta_secs) + " secs")
+        print("Dist delta: " + str(round(dist_delta, 4)) + " km")
         print(f"https://www.google.com/maps/dir/{pointA[3]},+{pointA[4]}/{pointB[3]},+{pointB[4]}")
         print()
 
