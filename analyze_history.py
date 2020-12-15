@@ -1,8 +1,12 @@
-import datetime
+import sys
+import pathlib
+import zipfile
 import json
 import csv
+import datetime
+import haversine
 
-#Creates a list from placeVisit data.
+# Creates a list from placeVisit data. Not used but saving in case we need it later.
 def placeVisit(placeVisit_dict):
     place_id = placeVisit_dict["location"]["placeId"]
     lat = placeVisit_dict["location"]["latitudeE7"]
@@ -11,139 +15,237 @@ def placeVisit(placeVisit_dict):
     start_time = placeVisit_dict["duration"]["startTimestampMs"]
     end_time = placeVisit_dict["duration"]["endTimestampMs"]
     confidence = placeVisit_dict["visitConfidence"]
-    #Formatting variables
+    # Formatting variables
     lat = int(lat)/1e7
     lon = int(lon)/1e7
     start_time = timeStampToDate(int(start_time))
     end_time = timeStampToDate(int(end_time))
-    place_visit = [place_id,lat, lon, address, start_time, end_time, confidence]
+    place_visit = [place_id, lat, lon, address, start_time, end_time, confidence]
     return place_visit
 
-#Returns a list of all the waypoints of a activity.
-def activitySegment(activitySegment_dict):
+# Returns a list of the start and end points of an activity, and optionally the
+# waypoints in-between.
+def activitySegment(activitySegment_dict, includeWaypoints=True):
     start_point = activityStartPoint(activitySegment_dict)
     end_point = activityEndPoint(activitySegment_dict)
-    activity_points = activityRawPoints(activitySegment_dict, start_point)
-    activity_points.insert(0, start_point)
-    end_point.insert(1, (len(activity_points)) + 1)
-    activity_points.append(end_point)
+    if (includeWaypoints):
+        activity_points = activityRawPoints(activitySegment_dict, start_point)
+        activity_points.insert(0, start_point)
+        end_point.insert(1, (len(activity_points)) + 1)
+        activity_points.append(end_point)
+    else:
+        # use 2 as the 'order' field for the end point, since we're omitting waypoints
+        end_point.insert(1, 2)
+        activity_points = [start_point, end_point]
     return activity_points
 
-#Set start point of activity as a list.
+# Set start point of activity as a list.
 def activityStartPoint(activitySegment_dict):
     trip_id = activitySegment_dict["duration"]["startTimestampMs"]
     order = 1
-    lat = activitySegment_dict["startLocation"]["latitudeE7"]
-    lon = activitySegment_dict["startLocation"]["longitudeE7"]
-    time_stamp = timeStampToDate(int(trip_id))
+    lat = int(activitySegment_dict["startLocation"]["latitudeE7"])/1e7
+    lon = int(activitySegment_dict["startLocation"]["longitudeE7"])/1e7
+    orig_time_stamp = int(trip_id)
+    time_stamp = timeStampToDate(orig_time_stamp)
     distance = activitySegment_dict.get("distance", 0)
-    ac_type = activitySegment_dict["activityType"]
-    confidence = activitySegment_dict["confidence"]
+    if "activityType" in activitySegment_dict:
+        ac_type = activitySegment_dict["activityType"]
+    else:
+        ac_type = "UNKNOWN"
+    if "confidence" in activitySegment_dict:
+        confidence = activitySegment_dict["confidence"]
+    else:
+        confidence = "N/A"
     time_convention = timeStampToAMPM(int(trip_id))
-    #Formatting variables
-    lat = int(lat)/1e7
-    lon = int(lon)/1e7
-    start_point = [trip_id, order, lat, lon, time_stamp, distance, ac_type, confidence, time_convention]
+    start_point = [trip_id, order, lat, lon, orig_time_stamp, time_stamp, distance, ac_type, confidence, time_convention]
     return start_point
 
-#Creates a list of list with each waypoint of activity.
+# Set end point of activity as a list.
+def activityEndPoint(activitySegment_dict):
+    trip_id = activitySegment_dict["duration"]["startTimestampMs"]
+    lat = int(activitySegment_dict["endLocation"]["latitudeE7"])/1e7
+    lon = int(activitySegment_dict["endLocation"]["longitudeE7"])/1e7
+    orig_time_stamp = int(activitySegment_dict["duration"]["endTimestampMs"])
+    time_stamp = timeStampToDate(orig_time_stamp)
+    distance = activitySegment_dict.get("distance", 0)
+    if "activityType" in activitySegment_dict:
+        ac_type = activitySegment_dict["activityType"]
+    else:
+        ac_type = "UNKNOWN"
+    if "confidence" in activitySegment_dict:
+        confidence = activitySegment_dict["confidence"]
+    else:
+        confidence = "N/A"
+    time_convention = timeStampToAMPM(int(trip_id))
+    end_point = [trip_id, lat, lon, orig_time_stamp, time_stamp, distance, ac_type, confidence, time_convention]
+    return end_point
+
+# Creates a list of list with each waypoint of activity.
 def activityRawPoints(activitySegment_dict, start_point):
     points = []
     order = 1
     if "waypointPath" in activitySegment_dict.keys():
-      way_points = activitySegment_dict["waypointPath"]["waypoints"]
-      for point in way_points:
-        trip_id = start_point[0]
-        order += 1
-        lat = int(point["latE7"])/1e7
-        lon = int(point["lngE7"])/1e7
-        time_stamp = start_point[4]
-        distance = start_point[5]
-        ac_type = start_point[6]
-        confidence = start_point[7]
-        time_convention = timeStampToAMPM(int(trip_id))
-        #Formatting variables
-        list_point = [trip_id, order, lat, lon, time_stamp, distance, ac_type, confidence, time_convention]
-        points.append(list_point)
+        way_points = activitySegment_dict["waypointPath"]["waypoints"]
+        for point in way_points:
+            trip_id = start_point[0]
+            order += 1
+            lat = int(point["latE7"])/1e7
+            lon = int(point["lngE7"])/1e7
+            orig_time_stamp = start_point[4]            
+            time_stamp = start_point[5]
+            distance = start_point[6]
+            ac_type = start_point[7]
+            confidence = start_point[8]
+            time_convention = timeStampToAMPM(int(trip_id))
+            list_point = [trip_id, order, lat, lon, orig_time_stamp, time_stamp, distance, ac_type, confidence, time_convention]
+            points.append(list_point)
     elif "simplifiedRawPath" in activitySegment_dict.keys():
-      raw_points = activitySegment_dict["simplifiedRawPath"]["points"]
-      for point in raw_points:
-        trip_id = start_point[0]
-        order += 1
-        lat = int(point["latE7"])/1e7
-        lon = int(point["lngE7"])/1e7
-        time_stamp = timeStampToDate(int(point["timestampMs"]))
-        distance = start_point[5]
-        ac_type = start_point[6]
-        confidence = start_point[7]
-        time_convention = timeStampToAMPM(int(trip_id))
-        #Formatting variables
-        list_point = [trip_id, order, lat, lon, time_stamp, distance, ac_type, confidence, time_convention]
-        points.append(list_point)
+        raw_points = activitySegment_dict["simplifiedRawPath"]["points"]
+        for point in raw_points:
+            trip_id = start_point[0]
+            order += 1
+            lat = int(point["latE7"])/1e7
+            lon = int(point["lngE7"])/1e7
+            orig_time_stamp = int(point["timestampMs"])
+            time_stamp = timeStampToDate(int(point["timestampMs"]))
+            distance = start_point[5]
+            ac_type = start_point[6]
+            confidence = start_point[7]
+            time_convention = timeStampToAMPM(int(trip_id))
+            list_point = [trip_id, order, lat, lon, orig_time_stamp, time_stamp, distance, ac_type, confidence, time_convention]
+            points.append(list_point)
     return points
 
-#Set end point of activity as a list.
-def activityEndPoint(activitySegment_dict):
-    trip_id = activitySegment_dict["duration"]["startTimestampMs"]
-    lat = activitySegment_dict["endLocation"]["latitudeE7"]
-    lon = activitySegment_dict["endLocation"]["longitudeE7"]
-    time_stamp = activitySegment_dict["duration"]["endTimestampMs"]
-    distance = activitySegment_dict.get("distance", 0)
-    ac_type = activitySegment_dict["activityType"]
-    confidence = activitySegment_dict["confidence"]
-    time_convention = timeStampToAMPM(int(trip_id))
-    #Formatting variables
-    lat = int(lat)/1e7
-    lon = int(lon)/1e7
-    time_stamp = timeStampToDate(int(time_stamp))
-    end_point = [trip_id, lat, lon, time_stamp, distance, ac_type, confidence, time_convention]
-    return end_point
-
-#Convert milliseconds timestamp into a readable date.
+# Convert milliseconds timestamp into a readable date.
 def timeStampToDate(milliseconds):
     date = datetime.datetime.fromtimestamp(milliseconds/1000.0)
     date = date.strftime('%Y-%m-%d %H:%M:%S')
     return date
 
-#Check time convention.
+# Check time convention.
 def timeStampToAMPM(milliseconds):
     date = datetime.datetime.fromtimestamp(milliseconds/1000.0)
     if date.hour < 12:
-      time_convention = "AM"
+        time_convention = "AM"
     else:
-      time_convention = "PM"
+        time_convention = "PM"
     return time_convention
 
-#Method to run all the scripts.
-def parse_data(data):
+# Extract activity points to a list.
+def extractActivities(data, activity_list):
     for data_unit in data["timelineObjects"]:
-      if "activitySegment" in data_unit.keys():
-        write_activity_points_csv(activitySegment(data_unit["activitySegment"]))
-      elif "placeVisit" in data_unit.keys():
-        write_places_csv(placeVisit(data_unit["placeVisit"]))
-      else:
-        print("Error")
+        if "activitySegment" in data_unit.keys():
+            for point in activitySegment(data_unit["activitySegment"], False):
+                activity_list.append(point)
 
-#CSV writers.
-def write_places_csv(place_data_list):
-  with open('FULL_places.csv', 'a', newline='') as file:
-    writer = csv.writer(file, delimiter=',')
-    writer.writerow(place_data_list)
+# Extract activity points and place visits to CSV.
+def extractData_csv(data):
+    for data_unit in data["timelineObjects"]:
+        if "activitySegment" in data_unit.keys():
+            writeActivityPoints_csv(activitySegment(data_unit["activitySegment"], True))
+        elif "placeVisit" in data_unit.keys():
+            writePlaces_csv(placeVisit(data_unit["placeVisit"]))
+        else:
+          print("Error")
 
-def write_activity_points_csv(point_data_list):
+# CSV writers. These append to existing files.
+def writePlaces_csv(place_data_list):
+    with open('FULL_places.csv', 'a', newline='') as file:
+      writer = csv.writer(file, delimiter=',')
+      writer.writerow(place_data_list)
+
+def writeActivityPoints_csv(point_data_list):
   with open('FULL_activity_points.csv', 'a', newline='') as file:
-    writer = csv.writer(file, delimiter=',')
-    writer.writerows(point_data_list)
+      writer = csv.writer(file, delimiter=',')
+      writer.writerows(point_data_list)
 
+# Parse zip file and return array of location data. Fields:
+#    0: user_id
+#    1: trip_id
+#    2: path order
+#    3: latitude
+#    4: longitude
+#    5: orig_time_stamp (ms)
+#    6: time_stamp (human readable)
+#    7: distance
+#    8: ac_type
+#    9: confidence
+#   10: time_convention
+def parseActivitiesFromZip(zip_fn, user_id=""):
+    activity=[]
+    with zipfile.ZipFile(zip_fn, 'r') as zip_obj:
+        for zip_info in zip_obj.infolist():
+            fn = zip_info.filename
+            if "Semantic" in fn and fn.endswith('.json'):
+#                print(fn)                            
+#                zip_info.filename = os.path.basename(zip_info.filename)
+#                zip_obj.extract(zip_info, 'temp1')
+                with zip_obj.open(fn) as f:
+                    data = json.load(f)
+                    extractActivities(data, activity)
+    for act in activity:
+        act.insert(0, user_id)
+    return activity
 
-#-------------------------------------------------------------------------------
-#-------------------------------------------------------------------------------
+# Default thresholds are 30 minutes and 0.5 km
+def showDelta(pointA, pointB, time_threshold_ms=900000, dist_threshold_km=0.5):
+    time_delta = pointB[5] - pointA[5]
+    dist_delta = haversine.haversine((pointA[3], pointA[4]),
+                                     (pointB[3], pointB[4]))
+    if time_delta <= time_threshold_ms and dist_delta <= dist_threshold_km:
+        print("Possible overlap!")
+        print(pointA)
+        print(pointB)
+        print("Time delta: " + str(time_delta/1000/60) + " mins")
+        print("Dist delta: " + str(dist_delta) + " km")
+        print(f"https://www.google.com/maps/dir/{pointA[3]},+{pointA[4]}/{pointB[3]},+{pointB[4]}")
+        print()
 
-files = ["04-2019_APRIL.json", "05-2019_MAY.json", "06-2019_JUNE.json", "07-2019_JULY.json", "08-2019_AUGUST.json", "09-2019_SEPTEMBER.json"]
+if len(sys.argv)-1 == 1:
+    fn = sys.argv[1]
+    name = pathlib.Path(fn).stem
+    activity = parseActivitiesFromZip(fn, name)
+    activity.sort(key=lambda x: x[5], reverse=False)
+    for act in activity:
+        print(act)
+elif len(sys.argv)-1 == 2:
+    # Combine activity lists into a single list sorted by timestamp. First
+    # field indicates which user the data point came from.
 
-for file in files:
-  # import pdb; pdb.set_trace()
+    user1_fn = sys.argv[1]
+    user2_fn = sys.argv[2]
+    user1_name = pathlib.Path(user1_fn).stem
+    user2_name = pathlib.Path(user2_fn).stem
+    user1_activity = parseActivitiesFromZip(user1_fn, user1_name)
+    user2_activity = parseActivitiesFromZip(user2_fn, user2_name)
+    activity = user1_activity + user2_activity
+    activity.sort(key=lambda x: x[5], reverse=False)
 
-  with open(f"data/{file}") as f:
-    data = json.load(f)
-  parse_data(data)
+    # Naive algorithm: save the data point for when each user was last seen.
+    # Iterate over all points comparing current point to the "last seen"
+    # point from the previous user. If the distance delta and time delta
+    # criteria are met, flag it as a potential overlap.
+
+    lastseen_user1 = []
+    lastseen_user2 = []
+    time_threshold_ms = 120 * 60 * 1000;
+    dist_threshold_km = 1;
+    for act in activity:
+#        print(act)
+        if act[0] == user1_name:
+            if len(lastseen_user2) > 0:
+                showDelta(lastseen_user2, act, time_threshold_ms, dist_threshold_km)
+            lastseen_user1 = act
+        elif act[0] == user2_name:
+            if len(lastseen_user1) > 0:
+                showDelta(lastseen_user1, act, time_threshold_ms, dist_threshold_km)
+            lastseen_user2 = act
+        else:
+            print("Error: Can't figure out which user this data point is for")
+else:
+    print("USAGE")
+    print(f"  Dump single file  :\t{sys.argv[0]} [zipfile]")
+    print(f"  Look for overlaps :\t{sys.argv[0]} [zipfile1] [zipfile2]\n")
+    print()
+    
+        
