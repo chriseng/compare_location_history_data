@@ -227,7 +227,7 @@ def simplifyDataPoint(point):
     
 # Default thresholds are 30 minutes and 0.5 km
 def showDelta(pointA, pointB, time_threshold_ms=900000, dist_threshold_km=0.5):
-    time_delta = pointB[5] - pointA[5]
+    time_delta = abs(pointB[5] - pointA[5])
     dist_delta = haversine.haversine((pointA[3], pointA[4]),
                                      (pointB[3], pointB[4]))
     if time_delta <= time_threshold_ms and dist_delta <= dist_threshold_km:
