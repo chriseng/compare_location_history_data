@@ -9,7 +9,7 @@ This project attempts to determine whether two Google Timeline location history 
 ## Usage
 
 * Download a .zip of each person's Google location history. This can be done via [Google Takeout](https://takeout.google.com/settings/takeout/custom/location_history).
-* Run `python3 analyze_history.py [zip]` to parse and dump the contents of a single exported .zip file
+* (optional) Run `python3 analyze_history.py [zip]` to dump the contents of a single exported .zip file, just to make sure everything is parsing correctly
 * Run `python3 analyze_history.py [zip1] [zip2]` to find the overlaps (the name of the .zip files doesn't matter)
 
 ## Data Set
