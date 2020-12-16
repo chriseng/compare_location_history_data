@@ -5,6 +5,7 @@ This project attempts to determine whether two Google Timeline location history 
 ## Prerequisites
 
 * Python3, with the `haversine` library (for calculating GPS distances)
+  * Run `pip3 install -r requirements.txt` to verify you have it
 
 ## Usage
 
