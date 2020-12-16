@@ -269,7 +269,7 @@ elif len(sys.argv)-1 == 2:
     lastseen_user1 = []
     lastseen_user2 = []
     time_threshold_ms = 120 * 60 * 1000;
-    dist_threshold_km = 0.5
+    dist_threshold_km = 1
     for act in activity:
 #        print(act)
         if act[0] == user1_name:
