@@ -225,11 +225,11 @@ def parseActivityFromZip(zip_fn, user_id=""):
 def simplifyDataPoint(point):
     return [point[0], point[6], point[3], point[4], point[8]]
     
-# Default thresholds are 30 minutes and 0.5 km
-def showDelta(pointA, pointB, time_threshold_ms=900000, dist_threshold_km=0.5):
+def showDelta(pointA, pointB, time_threshold_mins, dist_threshold_km):
     time_delta = abs(pointB[5] - pointA[5])
     dist_delta = haversine.haversine((pointA[3], pointA[4]),
                                      (pointB[3], pointB[4]))
+    time_threshold_ms = time_threshold_mins * 60 * 1000
     if time_delta <= time_threshold_ms and dist_delta <= dist_threshold_km:
         print("Possible overlap!")
         print(simplifyDataPoint(pointA))
@@ -268,17 +268,20 @@ elif len(sys.argv)-1 == 2:
 
     lastseen_user1 = []
     lastseen_user2 = []
-    time_threshold_ms = 120 * 60 * 1000;
+
+    # Change delta thresholds here, if you want
+    time_threshold_mins = 120
     dist_threshold_km = 1
+    
     for act in activity:
 #        print(act)
         if act[0] == user1_name:
             if len(lastseen_user2) > 0:
-                showDelta(act, lastseen_user2, time_threshold_ms, dist_threshold_km)
+                showDelta(act, lastseen_user2, time_threshold_mins, dist_threshold_km)
             lastseen_user1 = act
         elif act[0] == user2_name:
             if len(lastseen_user1) > 0:
-                showDelta(lastseen_user1, act, time_threshold_ms, dist_threshold_km)
+                showDelta(lastseen_user1, act, time_threshold_mins, dist_threshold_km)
             lastseen_user2 = act
         else:
             print("Error: Can't figure out which user this data point is for")
