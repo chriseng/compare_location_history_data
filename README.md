@@ -5,11 +5,11 @@ This project attempts to determine whether two Google Timeline location history 
 ## Prerequisites
 
 * Python3, with the `haversine` library (for calculating GPS distances)
-  * Run `pip3 install -r requirements.txt` to verify you have it
 
 ## Usage
 
 * Download a .zip of each person's Google location history. This can be done via [Google Takeout](https://takeout.google.com/settings/takeout/custom/location_history).
+* Run `pip3 install -r requirements.txt` to verify libraries are present
 * (optional) Run `python3 analyze_history.py [zip]` to dump the contents of a single exported .zip file, just to make sure everything is parsing correctly
 * Run `python3 analyze_history.py [zip1] [zip2]` to find the overlaps (the name of the .zip files doesn't matter)
 
