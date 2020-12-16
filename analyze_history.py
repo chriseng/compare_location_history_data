@@ -173,7 +173,7 @@ def extractData(data, points_list):
             for point in placeVisit(data_unit["placeVisit"]):
                 points_list.append(point)                
 
-# Extract activity points and place visits to CSV.
+# Extract activity points and place visits to CSV. Not currently used.
 def extractData_csv(data):
     for data_unit in data["timelineObjects"]:
         if "activitySegment" in data_unit.keys():
@@ -183,7 +183,7 @@ def extractData_csv(data):
         else:
           print("Error")
 
-# CSV writers. These append to existing files.
+# CSV writers. These append to existing files. Not currently used.
 def writePlaces_csv(place_data_list):
     with open('FULL_places.csv', 'a', newline='') as file:
       writer = csv.writer(file, delimiter=',')
