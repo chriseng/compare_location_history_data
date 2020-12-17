@@ -1,4 +1,4 @@
-# location_history_data
+# compare_location_history_data
 
 This project attempts to determine whether two Google Timeline location history data sets overlap temporally and geographically, i.e. were these two people ever nearby each other at roughly the same time.
 
