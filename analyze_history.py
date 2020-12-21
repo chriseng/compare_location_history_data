@@ -238,7 +238,9 @@ def showDelta(pointA, pointB, time_threshold_mins, dist_threshold_km):
         time_delta_mins = int(time_delta/1000/60) % 60
         print("Time delta: " + str(time_delta_mins) + " mins " + str(time_delta_secs) + " secs")
         print("Dist delta: " + str(round(dist_delta, 4)) + " km")
-        print(f"https://www.google.com/maps/dir/{pointA[3]},+{pointA[4]}/{pointB[3]},+{pointB[4]}")
+        # The "data" parameters for walking instructions is documented here:
+        # https://support.google.com/maps/forum/AAAAQuUrST84CiQTcarJHk/?hl=en&msgid=freuulMVFH0J&gpf=d/msg/maps/4CiQTcarJHk/freuulMVFH0J
+        print(f"https://www.google.com/maps/dir/{pointA[3]},+{pointA[4]}/{pointB[3]},+{pointB[4]}/data=!4m2!4m1!3e2")
         print()
 
 if len(sys.argv)-1 == 1:
